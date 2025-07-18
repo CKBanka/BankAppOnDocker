@@ -1,0 +1,16 @@
+services:
+  mysqldb:
+    image: mysql:8.0
+    ports:
+      - "3307:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=user_db
+    restart: always
+  spring-boot-service:
+    build: ./
+    container_name: spring-boot-container
+    ports:
+      - "9090:9090"
+    depends_on: 
+      - mysqldb

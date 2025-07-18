@@ -1,0 +1,30 @@
+services:
+  mysqldb:
+    image: mysql:8.0
+    ports:
+      - "3307:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=user_db
+    restart: always
+    healthcheck: # <-- ADD THIS BLOCK
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$$MYSQL_ROOT_USER", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s # Check every 10 seconds
+      timeout: 5s   # Timeout after 5 seconds
+      retries: 5    # Retry 5 times before marking as unhealthy
+      start_period: 30s # Give it 30 seconds to start up before checking
+  spring-boot-service:
+    build: .\backend\Bank
+    container_name: spring-boot-cont
+    ports:
+      - "9090:9090"
+    depends_on:
+      mysqldb:
+        condition: service_healthy # <-- CHANGE THIS LINE
+  react-service:
+    build: .\frontend\userbank
+    container_name: react-cont
+    ports:
+      - "80:80"
+    depends_on:
+      - spring-boot-service

@@ -1,0 +1,121 @@
+package com.controller;
+
+import com.bean.Account;
+import com.service.AccountService; 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal;
+import java.util.Map;
+import java.util.Optional;
+
+@RestController
+@CrossOrigin
+@RequestMapping("/api/accounts")
+public class AccountController {
+
+    @Autowired
+    private AccountService accountService; // Inject the service instead of repository
+
+    /**
+     * Creates a new bank account.
+     *
+     * POST /api/accounts
+     * Request Body:
+     * {
+     * "accountNumber": "ACC12345",
+     * "accountHolderName": "John Doe"
+     * }
+     * Response: Created Account object
+     */
+    @PostMapping
+    public ResponseEntity<Account> createAccount(@RequestBody Account account) {
+        try {
+            Account savedAccount = accountService.createAccount(account);
+            return new ResponseEntity<>(savedAccount, HttpStatus.CREATED);
+        } catch (IllegalArgumentException e) {
+            if (e.getMessage().contains("already exists")) {
+                return new ResponseEntity<>(HttpStatus.CONFLICT); // 409 Conflict
+            }
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST); // 400 Bad Request for other validation issues
+        }
+    }
+
+    /**
+     * Retrieves an account by its ID.
+     *
+     * GET /api/accounts/{id}
+     * Response: Account object or 404 Not Found
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<Account> getAccountById(@PathVariable Long id) {
+        Optional<Account> account = accountService.getAccountById(id);
+        return account.map(value -> new ResponseEntity<>(value, HttpStatus.OK))
+                      .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
+    }
+
+    /**
+     * Deposits money into an account.
+     *
+     * PUT /api/accounts/{id}/deposit
+     * Request Body:
+     * {
+     * "amount": 100.00
+     * }
+     * Response: Updated Account object or 404 Not Found / 400 Bad Request
+     */
+    @PutMapping("/{id}/deposit")
+    public ResponseEntity<Account> deposit(@PathVariable Long id, @RequestBody Map<String, BigDecimal> request) {
+        BigDecimal amount = request.get("amount");
+        try {
+            Account updatedAccount = accountService.deposit(id, amount);
+            return new ResponseEntity<>(updatedAccount, HttpStatus.OK);
+        } catch (IllegalArgumentException e) {
+            if (e.getMessage().contains("Account not found")) {
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            }
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST); // For invalid amount
+        }
+    }
+
+    /**
+     * Withdraws money from an account.
+     *
+     * PUT /api/accounts/{id}/withdraw
+     * Request Body:
+     * {
+     * "amount": 50.00
+     * }
+     * Response: Updated Account object or 404 Not Found / 400 Bad Request / 409 Conflict (Insufficient funds)
+     */
+    @PutMapping("/{id}/withdraw")
+    public ResponseEntity<Account> withdraw(@PathVariable Long id, @RequestBody Map<String, BigDecimal> request) {
+        BigDecimal amount = request.get("amount");
+        try {
+            Account updatedAccount = accountService.withdraw(id, amount);
+            return new ResponseEntity<>(updatedAccount, HttpStatus.OK);
+        } catch (IllegalArgumentException e) {
+            if (e.getMessage().contains("Account not found")) {
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            }
+            if (e.getMessage().contains("Insufficient funds")) {
+                return new ResponseEntity<>(HttpStatus.CONFLICT); // 409 Conflict for business rule violation
+            }
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST); // For invalid amount
+        }
+    }
+
+    /**
+     * Retrieves all accounts.
+     *
+     * GET /api/accounts
+     * Response: List of Account objects
+     */
+    @GetMapping
+    public ResponseEntity<Iterable<Account>> getAllAccounts() {
+        Iterable<Account> accounts = accountService.getAllAccounts();
+        return new ResponseEntity<>(accounts, HttpStatus.OK);
+    }
+}

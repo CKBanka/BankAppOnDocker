@@ -1,0 +1,7 @@
+spring.application.name=Bank
+spring.port=9090
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.datasource.url=jdbc:mysql://mysqldb/user_db
+spring.datasource.username=root
+spring.datasource.password=root
+spring.jpa.hibernate.ddl-auto=updateperties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
